@@ -18,13 +18,13 @@ Authentication is done in 3 stages:
     </tr>
   </thead>
   <tfoot>
+  </tfoot>
+  <tbody>
     <tr>
       <td>[YMSG16#YMSG_STATUS_AVAILABLE YMSG_STATUS_AVAILABLE]</td>
       <td>
 [YMSG16#YMSG_STATUS_AVAILABLE 0x00]</td>
     </tr>
-  </tfoot>
-  <tbody>
     <tr>
       <td>YMSG_SERVICE_MESSAGE</td>
       <td>0x09</td>
