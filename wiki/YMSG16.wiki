@@ -10,7 +10,6 @@ Authentication is done in 3 stages:
   * HTTPS request is made to server with the username, password and key form the socket
   * The https returns cookie values used for the rest of login.
 
-
 <table border="1" width="400">
   <thead>
     <tr>
@@ -21,7 +20,8 @@ Authentication is done in 3 stages:
   <tfoot>
     <tr>
       <td>YMSG_STATUS_AVAILABLE</td>
-      <td>0x00</td>
+      <td>
+[YMSG16#available_example 0x00]</td>
     </tr>
   </tfoot>
   <tbody>
@@ -35,3 +35,12 @@ Authentication is done in 3 stages:
     </tr>
   </tbody>
 </table>
+
+
+
+===available_example===
+asdfasdf
+asdf
+a
+sdf
+asd
