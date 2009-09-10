@@ -1,0 +1,37 @@
+= YMSG16 =
+
+This will be used to document the YMSG16 protocol
+
+
+=== Authentication ===
+
+Authentication is done in 3 stages:
+  * Packet is sent to yahoo requesting a login
+  * HTTPS request is made to server with the username, password and key form the socket
+  * The https returns cookie values used for the rest of login.
+
+
+<table border="1" width="400">
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>Service Code</th>
+    </tr>
+  </thead>
+  <tfoot>
+    <tr>
+      <td>YMSG_STATUS_AVAILABLE</td>
+      <td>0x00</td>
+    </tr>
+  </tfoot>
+  <tbody>
+    <tr>
+      <td>YMSG_SERVICE_MESSAGE</td>
+      <td>0x09</td>
+    </tr>
+    <tr>
+      <td>YMSG_SERVICE_LOGON</td>
+      <td>0x01</td>
+    </tr>
+  </tbody>
+</table>
