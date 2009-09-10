@@ -1,7 +1,5 @@
-= YMSG16 =
-
 This will be used to document the YMSG16 protocol
-
+<wiki:toc max_depth="1" />
 
 === Authentication ===
 
