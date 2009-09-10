@@ -19,9 +19,9 @@ Authentication is done in 3 stages:
   </thead>
   <tfoot>
     <tr>
-      <td>YMSG_STATUS_AVAILABLE</td>
+      <td>[YMSG16#YMSG_STATUS_AVAILABLE YMSG_STATUS_AVAILABLE]</td>
       <td>
-[YMSG16#available_example 0x00]</td>
+[YMSG16#YMSG_STATUS_AVAILABLE 0x00]</td>
     </tr>
   </tfoot>
   <tbody>
@@ -38,7 +38,7 @@ Authentication is done in 3 stages:
 
 
 
-===available_example===
+===YMSG_STATUS_AVAILABLE===
 asdfasdf
 asdf
 a
