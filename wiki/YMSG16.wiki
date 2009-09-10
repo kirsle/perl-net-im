@@ -35,8 +35,7 @@ Authentication is done in 3 stages:
     </tr>
   </tbody>
 </table>
-
----
+---- 
 ==Examples==
 
 ===YMSG_STATUS_AVAILABLE===
