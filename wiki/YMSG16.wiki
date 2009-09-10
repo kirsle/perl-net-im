@@ -38,8 +38,8 @@ Authentication is done in 3 stages:
 ==Examples==
 
 ===YMSG_STATUS_AVAILABLE===
-asdfasdf
-asdf
-a
-sdf
-asd
+{{{
+  59 4d 53 47 00 10 00 64    00 18 00 c7 00 00 00 00    YMSG...d........
+  00 56 ba 91 33 c0 80 6d    61 74 74 2e 61 75 73 74    .V..3..matt.aust
+  69 6e c0 80 32 31 33 c0    80 32 c0 80                in..213..2..  
+}}}
