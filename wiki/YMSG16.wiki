@@ -21,7 +21,7 @@ In our example the service name is of-course YMSG, the protocol version is 16, t
 
 The service code in this example is 0x8a or 138 which is the YAHOO_SERVICE_KEEPALIVE of a simple ping.
 
-The status code is simply the an online status.
+The status code is basic status of the message.
 || *Status* || *Code* ||| *Hex* ||
 || Client Request || 0 ||| 0x00000000 ||
 || Server Response || 1 ||| 0x00000001 ||
