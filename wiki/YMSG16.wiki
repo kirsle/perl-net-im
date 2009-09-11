@@ -1,3 +1,5 @@
+<wiki:toc />
+
 This will be used to document the YMSG16 protocol
 = The Yahoo Packet =
 
