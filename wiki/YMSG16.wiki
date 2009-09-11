@@ -24,12 +24,11 @@ The service code in this example is 0x8a or 138 which is the YAHOO_SERVICE_KEEPA
 The status code is simply the an online status.
 || *Status* || *Code* ||| *Hex* ||
 || Client Request || 0 ||| 0x00000000 ||
-|| table || cells ||| cells ||
-|| table || cells ||| cells ||
-|| table || cells ||| cells ||
-|| table || cells ||| cells ||
-|| table || cells ||| cells ||
-|| table || cells ||| cells ||
+|| Server Response || 1 ||| 0x00000001 ||
+|| Available || 0 ||| 0x00000000 ||
+|| Be Right Back || 1 ||| 0x00000001 ||
+|| Unknown || 1515563605 ||| 0x5a55aa55 ||
+|| Offline || 1515563606 ||| 0x5a55aa56 ||
 
 Client Request
 
