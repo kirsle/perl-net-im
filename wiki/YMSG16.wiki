@@ -1,22 +1,39 @@
 This will be used to document the YMSG16 protocol
-=== The Yahoo Packet ===
+= The Yahoo Packet =
 
 == Header ==
 
 Header size is 20 bytes and include the following:
-  * Service name “YMSG”
-  * The protocol version
-  * Unknown flag 
-  * Length of the content of the message
-  * Yahoo [YMSG16#ServiceCodes service code]
-  * Status Code
-  * Session Id
+  * Service name “YMSG” (4 bytes) 
+  * The protocol version (2 bytes])
+  * Unknown flag (2 bytes)
+  * Length of the content of the message (2 bytes) 
+  * Yahoo [YMSG16#ServiceCodes service code] (2 bytes)
+  * Status Code (4 bytes)
+  * Session Id (4 bytes)
 
 {{{
 Y  M  S  G       16     100      16     138             0     65159168
 59 4d 53 47 | 00 10 | 00 64 | 00 10 | 00 8a | 00 00 00 00 |00 40 e2 03
 }}}
 
+In our example the service name is of-course YMSG, the protocol version is 16, the flag is always set to 100, and the length of our packet is 138 bytes.  
+
+The service code in this example is 0x8a or 138 which is the YAHOO_SERVICE_KEEPALIVE of a simple ping.
+
+The status code is simply the an online status.
+|| *Status* || *Code* ||| *Hex* ||
+|| Client Request || 0 ||| 0x00000000 ||
+|| table || cells ||| cells ||
+|| table || cells ||| cells ||
+|| table || cells ||| cells ||
+|| table || cells ||| cells ||
+|| table || cells ||| cells ||
+|| table || cells ||| cells ||
+
+Client Request
+
+=Data=
 
 == Service Codes ==
 
