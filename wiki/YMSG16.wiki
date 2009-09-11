@@ -61,8 +61,7 @@ Client Request
     </tr>
   </tbody>
 </table>
----- 
-
+ 
 ==Examples==
 
 ===YMSG_STATUS_AVAILABLE===
