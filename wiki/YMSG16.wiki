@@ -1,13 +1,24 @@
 This will be used to document the YMSG16 protocol
 <wiki:toc max_depth="1" />
 
-=== Authentication ===
+=== The Yahoo Packet ===
 
-Authentication is done in 3 stages:
-  * Packet is sent to yahoo requesting a login
-  * HTTPS request is made to server with the username, password and key form the socket
-  * The https returns cookie values used for the rest of login.
+== Header ==
 
+Header size is 20 bytes and include the following:
+  * Service name “YMSG”
+  * The protocol version
+  * Unknown flag 
+  * Length of the content of the message
+  * Yahoo [YMSG16#Service Codes service code]
+
+{{{
+Y  M  S  G       16     100      16     138             0     65159168
+59 4d 53 47 | 00 10 | 00 64 | 00 10 | 00 8a | 00 00 00 00 |00 40 e2 03
+}}}
+
+
+== Service Codes ==
 <table border="1" width="400">
   <thead>
     <tr>
