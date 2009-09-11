@@ -9,7 +9,7 @@ Header size is 20 bytes and include the following:
   * Unknown flag (2 bytes)
   * Length of the content of the message (2 bytes) 
   * Yahoo [YMSG16#ServiceCodes service code] (2 bytes)
-  * Status Code (4 bytes)
+  * [YMSG16#Status_Codes Status Code] (4 bytes)
   * Session Id (4 bytes)
 
 {{{
@@ -22,6 +22,7 @@ In our example the service name is of-course YMSG, the protocol version is 16, t
 The service code in this example is 0x8a or 138 which is the YAHOO_SERVICE_KEEPALIVE of a simple ping.
 
 The status code is basic status of the message.
+===Status_Codes===
 || *Status* || *Code* ||| *Hex* ||
 || Client Request || 0 ||| 0x00000000 ||
 || Server Response || 1 ||| 0x00000001 ||
@@ -34,7 +35,7 @@ Client Request
 
 =Data=
 
-== Service Codes ==
+=== Service Codes ===
 
 <table border="1" width="400">
   <thead>
