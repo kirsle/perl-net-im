@@ -1,6 +1,4 @@
 This will be used to document the YMSG16 protocol
-<wiki:toc max_depth="1" />
-
 === The Yahoo Packet ===
 
 == Header ==
@@ -11,6 +9,8 @@ Header size is 20 bytes and include the following:
   * Unknown flag 
   * Length of the content of the message
   * Yahoo [YMSG16#ServiceCodes service code]
+  * Status Code
+  * Session Id
 
 {{{
 Y  M  S  G       16     100      16     138             0     65159168
