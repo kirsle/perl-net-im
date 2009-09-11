@@ -10,7 +10,7 @@ Header size is 20 bytes and include the following:
   * The protocol version
   * Unknown flag 
   * Length of the content of the message
-  * Yahoo [YMSG16#Service Codes service code]
+  * Yahoo [YMSG16#Service_Codes service code]
 
 {{{
 Y  M  S  G       16     100      16     138             0     65159168
@@ -18,7 +18,7 @@ Y  M  S  G       16     100      16     138             0     65159168
 }}}
 
 
-== Service Codes ==
+== Service_Codes ==
 <table border="1" width="400">
   <thead>
     <tr>
