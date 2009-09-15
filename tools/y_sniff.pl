@@ -4,12 +4,15 @@ use Term::ANSIColor;
 use Socket;
 use Data::Dumper;
 
-use Constants ':all';
+use strict;
 
 $|++;
 $/ = '#';
 
 #dimg1.msg.vip.mud.yahoo.com
+my $VERSION = "1.0";
+
+print colored("\n\tYahoo Packet Sniffer v$VERSION\n-----------------------------------------\n\n", "cyan");
 
 my $services = {
 	YMSG_SERVICE_USER_LOGIN => 1,
@@ -509,6 +512,7 @@ sub getNameByValue{
         foreach my $name (keys(%$hash)){
                 return $name if $hash->{$name} == $value;
         }
+		return $value;
 }
 
 open(NG,"ngrep -x -ltd en0 YMSG |");
@@ -527,7 +531,7 @@ while(<NG>) {
         my ($date, $time, $from, $to, undef)  = split(' ', $cap_header);
         my $color = ($to =~ m/\:(5050)|(80)/)?'green':'red';
         
-        print colored("FROM $from TO: $to \n\n$body\n", $color);
+        print colored("FROM $from TO: $to \n\n$body\n\n", $color);
         my @rows = split("\n", $body);
         my $data = '';
         foreach my $row (@rows){
@@ -561,6 +565,6 @@ while(<NG>) {
 			$field = getNameByValue($fields, $field);
 			print colored("$field => $value", $color)."\n";
         }
-		print  "\n" . "-" x 50 ."\n\n";
+		print  "\n" . "-" x 100 ."\n\n";
     }
 }
