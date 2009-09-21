@@ -25,7 +25,7 @@ The service code in this example is 0x8a or 138 which is the YAHOO_SERVICE_KEEPA
 
 The status code is basic status of the message.
 
-===Status_Codes===
+==Status_Codes==
 
 || *Status* || *Code* ||| *Hex* ||
 || Client Request || 0 ||| 0x00000000 ||
@@ -50,7 +50,7 @@ Where YMSG_SERVICE_AUTH is the service code and YMSG_STATUS_AVAILABLE is the sta
 
 In all places where a Yahoo ID is mentioned, this ID should be all lowercase.
 
-=== ServiceCodes ===
+== ServiceCodes ==
 
 <table border="1" width="400">
   <thead>
@@ -68,7 +68,7 @@ In all places where a Yahoo ID is mentioned, this ID should be all lowercase.
 [YMSG16#YMSG_STATUS_AVAILABLE 0x00]</td>
     </tr>
     <tr>
-      <td>YMSG_SERVICE_AUTH</td>
+      <td>[YMSG16#Authentication YMSG_SERVICE_AUTH]</td>
       <td>0x57</td>
     </tr>
     <tr>
@@ -90,7 +90,7 @@ In all places where a Yahoo ID is mentioned, this ID should be all lowercase.
   </tbody>
 </table>
 
-=YMSG16 Authentication=
+=Authentication=
 
 To begin the auth process, the client connects to the YMSG server at cs101.msg.sp1.yahoo.com or other auth server, and sends the YMSG_SERVICE_AUTH packet.
 
