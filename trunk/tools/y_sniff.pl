@@ -515,7 +515,7 @@ sub getNameByValue{
 		return $value;
 }
 
-open(NG,"ngrep -x -ltd en0 YMSG |");
+open(NG,"ngrep -x -ltd eth1 YMSG |");
 #open(NG,"ngrep -x -ltd en0 ^YMSG |");
 
 while(<NG>) {
