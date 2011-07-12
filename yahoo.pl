@@ -5,13 +5,14 @@ use strict;
 use warnings;
 use lib "lib";
 use Net::IM;
+use Data::Dumper;
 
 my $im = Net::IM->new (debug => 1);
 
-my $yahoo = $im->addListener (
+my $yahoo = $im->addConnection (
 	network  => "YMSG",
 	username => "aidenrive",
-	password => "password",
+	password => "xxx",
 	hexdump  => 1,
 );
 
@@ -23,8 +24,18 @@ $im->addHandlers (
 	AddRequest   => \&on_added,
 	Typing       => \&on_typing,
 	BuddyStatus  => \&on_buddy_status,
+	BuddyList    => \&on_buddylist,
+	BuddyOnline  => \&on_buddy_online,
+	BuddyOffline => \&on_buddy_offline,
 	Disconnected => \&on_disconnected,
+
+	BuddyIconDownloaded => \&on_icon_downloaded,
+	BuddyIconUploaded   => \&on_icon_uploaded,
 );
+
+my $conn = $im->listConnections();
+say "Connections: " . join(", ", @{$conn});
+
 $im->login();
 $im->run();
 
@@ -33,6 +44,16 @@ sub on_connected {
 	my $id   = $self->whoami();
 
 	print "We're connected ($id)!\n";
+
+	# Upload our icon.
+	local $/;
+	open (ICON, "RiveScript-Hazard.png");
+	binmode(ICON);
+	my $data = <ICON>;
+	close (ICON);
+
+	print "Uploading buddy icon!!!\n";
+	$self->setIcon($data);
 }
 
 sub on_notification {
@@ -68,6 +89,8 @@ sub on_message {
 	$msg =~ s/\e.+?m//g;     # Strip the pseudo-ANSI color codes
 
 	print "[$from] $msg\n";
+	$self->sendTyping($from, 1);
+	sleep 2;
 
 	# Commands...
 	if ($msg =~ /^!buzz/i) {
@@ -92,6 +115,11 @@ sub on_message {
 		$self->removeBuddy($1, "Buddies");
 		$self->sendMessage($from, "Removed $1 from my buddy list.");
 	}
+	elsif ($msg =~ /^!buddies/i) {
+		# List the buddies
+		my $list = $self->getBuddyList();
+		print Dumper($list);
+	}
 	else {
 		$self->sendMessage($from, "You said: $msg");
 	}
@@ -107,4 +135,46 @@ sub on_buddy_status {
 	my ($self, $from, $status, $custom) = @_;
 
 	print "Buddy Status: $from ($status - $custom)\n";
+}
+
+sub on_buddylist {
+	my ($self, $list) = @_;
+
+	print "Got buddy list: " . Dumper($list);
+}
+
+sub on_buddy_online {
+	my ($self, $who) = @_;
+	print "$who has signed on.\n";
+}
+
+sub on_buddy_offline {
+	my ($self, $who) = @_;
+	print "$who is offline.\n";
+}
+
+sub on_icon_downloaded {
+	my ($self, $from, $type, $data) = @_;
+
+	print "Downloaded icon from $from: $type => $data\n";
+
+	# fetch it
+	use LWP::Simple;
+	open (WRITE, ">$from.png");
+	binmode WRITE;
+	print WRITE get $data;
+	close (WRITE);
+}
+
+sub on_icon_uploaded {
+	my $self = shift;
+
+	print "Buddy icon uploaded!\n";
+}
+
+sub on_disconnected {
+	my $self = shift;
+	my $id   = $self->whoami();
+
+	print "$id has been disconnected!\n";
 }
