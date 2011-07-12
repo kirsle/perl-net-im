@@ -7,6 +7,9 @@ use Carp;
 use IO::Socket;
 use IO::Select;
 use Data::Dumper;
+use LWP::UserAgent;
+use HTTP::Request;
+use Digest::MD5 qw(md5_hex);
 
 no strict "subs";
 
@@ -64,6 +67,7 @@ sub new {
 
 	# Common initialization.
 	my $self = $class->SUPER::new(
+		network    => "YMSG",
 		username   => delete $opts{yahoo_id} || delete $opts{username} || undef,
 		password   => delete $opts{password} || undef,
 		chatserver => delete $opts{chatserver} || "scs.msg.yahoo.com",
@@ -79,6 +83,7 @@ sub new {
 		tz         => undef, # Tz cookie
 		sessid     => 0,     # Session ID
 		pinged     => 0,     # Last pinged time
+		buddylist  => {},    # Local buddy list
 		%opts,
 	);
 	$self->debug("YMSG initialized.");
@@ -118,7 +123,9 @@ sub login {
 	$self->{pinged}    = time();
 
 	# Send the auth packet.
-	$self->send (YMSG_SERVICE_AUTH, YMSG_STATUS_AVAILABLE, 1 => $self->{username});
+	$self->send (YMSG_SERVICE_AUTH, YMSG_STATUS_AVAILABLE,
+		YMSG_FLD_CURRENT_ID() => $self->{username}
+	);
 
 	# Wait for the server's reply.
 	return 1;
@@ -194,10 +201,10 @@ sub do_one_loop {
 			$self->{sessid} = $sessid;
 
 			# Parse the parameters.
-			my $param = $self->parseParams($data);
+			my ($param,$ordered) = $self->parseParams($data);
 
 			# Handle the events.
-			$self->processPacket($service, $status, $param);
+			$self->processPacket($service, $status, $param, $ordered);
 		}
 	}
 
@@ -222,10 +229,10 @@ sub sendMessage {
 	# Send a message.
 	$to = normalize($to);
 	$self->send(YMSG_SERVICE_MESSAGE, YMSG_STATUS_AVAILABLE,
-		0  => $self->{username}, # Our ID
-		1  => $self->{username}, # Active ID
-		5  => $to,
-		14 => $msg,
+		YMSG_FLD_USER_NAME()   => $self->{username}, # Our ID
+		YMSG_FLD_CURRENT_ID()  => $self->{username}, # Active ID
+		YMSG_FLD_TARGET_USER() => $to,
+		YMSG_FLD_MSG()         => $msg,
 	);
 }
 
@@ -250,11 +257,11 @@ sub sendTyping {
 
 	# Send the status!
 	$self->send(YMSG_SERVICE_NOTIFY, YMSG_STATUS_AVAILABLE,
-		4  => $self->{username}, # Our ID
-		5  => $to,               # Their ID
-		13 => $status,           # Typing status
-		14 => ' ',               # Space?
-		49 => 'TYPING',          # Literal word
+		YMSG_FLD_SENDER()       => $self->{username}, # Our ID
+		YMSG_FLD_TARGET_USER()  => $to,               # Their ID
+		YMSG_FLD_FLAG()         => $status,           # Typing status
+		YMSG_FLD_MSG()          => ' ',               # Space?
+		YMSG_FLD_APPNAME()      => 'TYPING',          # Literal word
 	);
 }
 
@@ -281,6 +288,29 @@ sub sendAttention {
 	return shift->sendBuzz(@_);
 }
 
+=head2 data getBuddyList ([string groupName])
+
+Retrieve your buddy list. If given a group name, this method returns an array
+reference containing the buddies in that group. Otherwise, this method returns
+a hash reference of group names that contain lists of buddies in each group.
+
+=cut
+
+sub getBuddyList {
+	my ($self,$group) = @_;
+
+	# Group?
+	if (defined $group) {
+		if (exists $self->{buddylist}->{group}) {
+			return $self->{buddylist}->{group};
+		}
+		return undef;
+	}
+	else {
+		return $self->{buddylist};
+	}
+}
+
 =head2 void addBuddy (string YahooID, string group)
 
 Add a buddy to a group on your buddy list. Both fields are required.
@@ -305,9 +335,9 @@ sub addBuddy {
 
 	# Add them.
 	$self->send(YMSG_SERVICE_ADDBUDDY, YMSG_STATUS_NOTIFY,
-		1  => $self->{username}, # Us
-		7  => $buddy,            # Them
-		65 => $group,            # Group
+		YMSG_FLD_CURRENT_ID()     => $self->{username}, # Us
+		YMSG_FLD_BUDDY()          => $buddy,            # Them
+		YMSG_FLD_BUDDY_GRP_NAME() => $group,            # Group
 	);
 }
 
@@ -335,10 +365,51 @@ sub removeBuddy {
 
 	# Add them.
 	$self->send(YMSG_SERVICE_REMBUDDY, YMSG_STATUS_NOTIFY,
-		1  => $self->{username}, # Us
-		7  => $buddy,            # Them
-		65 => $group,            # Group
+		YMSG_FLD_CURRENT_ID()     => $self->{username}, # Us
+		YMSG_FLD_BUDDY()          => $buddy,            # Them
+		YMSG_FLD_BUDDY_GRP_NAME() => $group,            # Group
 	);
+}
+
+=head2 void addIgnore (string YahooID)
+
+Add C<YahooID> to your ignore list.
+
+=cut
+
+sub addIgnore {
+	my ($self,$buddy,$flag) = @_;
+	$buddy = normalize($buddy);
+	$flag = 1 unless defined $flag;
+
+	# Should be logged in.
+	unless ($self->{loggedin}) {
+		carp "Can't add a buddy because you're not logged in!";
+		return;
+	}
+
+	# Both fields are required.
+	if (!defined $buddy || !length $buddy) {
+		carp "Must give a buddy name to ignore!";
+		return;
+	}
+
+	# Add them.
+	$self->send(YMSG_SERVICE_IGNORECONTACT, YMSG_STATUS_NOTIFY,
+		YMSG_FLD_CURRENT_ID() => $self->{username}, # Us
+		YMSG_FLD_BUDDY()      => $buddy,            # Them
+		YMSG_FLD_FLAG()       => $flag,             # Ignore flag
+	);
+}
+
+=head2 void removeIgnore (string YahooID)
+
+Remove C<YahooID> from your ignore list.
+
+=cut
+
+sub removeIgnore {
+	return shift->addIgnore(shift, 0);
 }
 
 =head2 void acceptAddRequest (string YahooID)
@@ -352,10 +423,17 @@ sub acceptAddRequest {
 	my ($self,$buddy) = @_;
 	$buddy = normalize($buddy);
 
+	# Should be logged in.
+	unless ($self->{loggedin}) {
+		carp "Can't add a buddy because you're not logged in!";
+		return;
+	}
+
 	$self->send(YMSG_SERVICE_ACCEPTCONTACT, YMSG_STATUS_AVAILABLE,
-		1  => $self->{username}, # Us
-		5  => $buddy,            # Them
-		13 => 1,
+		YMSG_FLD_CURRENT_ID()  => $self->{username}, # Us
+		YMSG_FLD_TARGET_USER() => $buddy,            # Them
+		YMSG_FLD_FLAG()        => 1,
+		334                    => 0,
 	);
 }
 
@@ -370,21 +448,92 @@ sub rejectAddRequest {
 	my ($self,$buddy,$reason) = @_;
 	$reason //= "No reason given."; #//
 
+	# Should be logged in.
+	unless ($self->{loggedin}) {
+		carp "Can't add a buddy because you're not logged in!";
+		return;
+	}
+
 	$self->send(YMSG_SERVICE_REJECTCONTACT, YMSG_STATUS_AVAILABLE,
-		1  => $self->{username}, # Us
-		7  => $buddy,            # Them
-		14 => $reason,           # Reason
+		YMSG_FLD_CURRENT_ID()  => $self->{username}, # Us
+		YMSG_FLD_BUDDY()       => $buddy,            # Them
+		YMSG_FLD_MSG()         => $reason,           # Reason
 	);
 }
 
-=head2 private void processPacket (int service, int status, href body)
+=head2 bool setIcon (bin data)
+
+Set your buddy icon/avatar. C<data> should be the binary data for your image
+(be sure to use C<binmode()> if reading it from disk). Example:
+
+  local $/;
+  open (my $icon, "<", "avatar.png");
+  binmode($icon);
+  my $data = <$icon>;
+  close ($icon);
+
+  $yahoo->setIcon($data);
+
+Use only PNG images, please.
+
+=cut
+
+sub setIcon {
+	my ($self, $data) = @_;
+
+	# Should be logged in.
+	unless ($self->{loggedin}) {
+		carp "Can't add a buddy because you're not logged in!";
+		return;
+	}
+
+	# Make the file name.
+	my $filename = md5_hex($data) . ".png";
+
+	# We need to HTTP-POST this request.
+	my $host = "filetransfer.msg.yahoo.com";
+	my $sock = IO::Socket::INET->new (
+		PeerAddr => $host,
+		PeerPort => 80,
+		Proto    => 'tcp',
+	);
+
+	# This is a weird HTTP server. It wants a normal YMSG packet as the post param.
+	my $packet = $self->preparePacket (YMSG_SERVICE_HTTP_AVATAR, YMSG_STATUS_HTTP_AVATAR,
+		YMSG_FLD_CURRENT_ID()      => $self->{username},
+		YMSG_FLD_EXPIRATION_TIME() => 604800,
+		YMSG_FLD_FILE_SIZE()       => length($data),
+		YMSG_FLD_FILE_NAME()       => $filename,
+		YMSG_FLD_MSG()             => "",
+		YMSG_FLD_FILE_DATA()       => $data,
+	);
+	$self->hexdump("Avatar Upload Content", $packet);
+	my $length = length($packet);
+
+	# Prepare the HTTP request.
+	my $headers = join("\x0D\x0A",
+		"POST /notifyft HTTP/1.1",
+		"User-Agent: Mozilla/5.0",
+		"Cookie: T=$self->{tz}; Y=$self->{yv}",
+		"Host: $host",
+		"Content-Length: $length",
+		"Cache-Control: no-cache",
+		"", "");
+	$sock->send($headers . $packet);
+	$sock->close();
+
+	# Pray.
+	return 1;
+}
+
+=head2 private void processPacket (int service, int status, href body, aref ordered)
 
 Handle incoming packets from the Yahoo server.
 
 =cut
 
 sub processPacket {
-	my ($self,$service,$status,$body) = @_;
+	my ($self,$service,$status,$body,$ordered) = @_;
 
 	# Handle supported event codes.
 	if ($service == YMSG_SERVICE_AUTH) {
@@ -396,16 +545,16 @@ sub processPacket {
 
 		# Send our auth info back so we can get logged in!
 		$self->send(YMSG_SERVICE_AUTHRESP, YMSG_STATUS_AVAILABLE,
-			1   => $self->{username},
-			0   => $self->{username},
-			277 => $self->{yv}, # Auth cookie
-			278 => $self->{tz}, # Auth cookie
-			307 => $authstr,    # Auth string
-			244 => 4194239,     # Internal build number?
-			2   => $self->{username},
-			2   => 1,
-			98  => "us",        # Country
-			135 => "9.0.0.2162", # YMSG client version number
+			YMSG_FLD_CURRENT_ID()        => $self->{username},
+			YMSG_FLD_USER_NAME()         => $self->{username},
+			YMSG_FLD_LOGIN_Y_COOKIE()    => $self->{yv}, # Auth cookie
+			YMSG_FLD_LOGIN_T_COOKIE()    => $self->{tz}, # Auth cookie
+			YMSG_FLD_CRUMB_HASH()        => $authstr,    # Auth string
+			YMSG_FLD_CAPABILITY_MATRIX() => 4194239,     # Internal build number?
+			YMSG_FLD_ACTIVE_ID()         => $self->{username},
+			YMSG_FLD_ACTIVE_ID()         => 1,
+			YMSG_FLD_COUNTRY_CODE()      => "us",        # Country
+			YMSG_FLD_VERSION()           => "9.0.0.2162", # YMSG client version number
 		);
 	}
 	elsif ($service == YMSG_SERVICE_PING) {
@@ -422,18 +571,40 @@ sub processPacket {
 		$self->{loggedin} = 1;
 		$self->event("Connected");
 	}
+	elsif ($service == YMSG_SERVICE_LIST_Y15) {
+		# The buddy list. Loop through the fields in order.
+		my $group = "No Group";
+		$self->{buddylist} = {};
+		foreach my $pair (@{$ordered}) {
+			my $key   = $pair->[0];
+			my $value = $pair->[1];
+
+			print "ORDERED: $key = $value\n";
+
+			# We only care about group names and contacts.
+			if ($key == YMSG_FLD_BUDDY_GRP_NAME) {
+				$group = $value;
+			}
+			elsif ($key == YMSG_FLD_BUDDY) {
+				$self->{buddylist}->{$group}->{$value} = 1;
+			}
+		}
+
+		# Notify about the buddy list.
+		$self->event("BuddyList", $self->{buddylist});
+	}
 	elsif ($service == YMSG_SERVICE_SYSMESSAGE) {
 		# We got a system message (probably nagging us to upgrade our client!)
-		my $from    = $body->{4};
-		my $to      = $body->{5};
-		my $message = $body->{14};
+		my $from    = $body->{ YMSG_FLD_SENDER() };
+		my $to      = $body->{ YMSG_FLD_TARGET_USER() };
+		my $message = $body->{ YMSG_FLD_MSG() };
 		$self->event("Notification", $from, $to, $message);
 	}
-	elsif ($service == YMSG_SERVICE_NEWCONTACT || $service == 214) { # TODO
+	elsif ($service == YMSG_SERVICE_ACCEPTCONTACT) {
 		# A new buddy request!
 		# 4: Their YahooID
 		# 5: Our YahooID
-		$self->event("AddRequest", $body->{4});
+		$self->event("AddRequest", $body->{ YMSG_FLD_SENDER() });
 	}
 	elsif ($service == YMSG_SERVICE_MESSAGE) {
 		# Receiving an IM!
@@ -443,10 +614,10 @@ sub processPacket {
 
 		# Message or buzz?
 		if ($body->{14} eq "<ding>") {
-			$self->event("Attention", $body->{4});
+			$self->event("Attention", $body->{ YMSG_FLD_SENDER() });
 		}
 		else {
-			$self->event("Message", $body->{4}, $body->{14});
+			$self->event("Message", $body->{ YMSG_FLD_SENDER() }, $body->{ YMSG_FLD_MSG() });
 		}
 	}
 	elsif ($service == YMSG_SERVICE_NOTIFY) {
@@ -457,8 +628,8 @@ sub processPacket {
 		# 13: "1"? If 49=TYPING, 13=1 if they're typing or 0 if they stopped.
 		# 14: " "?
 		if ($body->{49} eq "TYPING") {
-			my $typing = $body->{13} ? 1 : 0;
-			$self->event("Typing", $body->{4}, $typing);
+			my $typing = $body->{ YMSG_FLD_FLAG() } ? 1 : 0;
+			$self->event("Typing", $body->{ YMSG_FLD_SENDER() }, $typing);
 		}
 	}
 	elsif ($service == YMSG_SERVICE_BUDDYSTATUS) {
@@ -466,14 +637,40 @@ sub processPacket {
 		# 7:  Their YahooID
 		# 19: Their custom away message
 		# 10: Their status (one of YMSG_STATUS_*)
-		$self->event("BuddyStatus", $body->{7}, $body->{10}, $body->{19});
+		$self->event("BuddyStatus", $body->{ YMSG_FLD_BUDDY() }, $body->{ YMSG_FLD_AWAY_STATUS() }, $body->{ YMSG_FLD_AWAY_MSG() });
 	}
 	elsif ($service == YMSG_SERVICE_REMBUDDY) {
 		# Buddy removed successfully.
 		# 1:  Our ID
 		# 36: Group name
 		# 7:  Their ID
-		$self->event("BuddyRemoved", $body->{7}, $body->{36});
+		$self->event("BuddyRemoved", $body->{ YMSG_FLD_BUDDY() }, $body->{ YMSG_FLD_OLD_GRP_NAME() });
+	}
+	elsif ($service == YMSG_SERVICE_LOGOFF) {
+		# Buddy logged off.
+		$self->event("BuddyOffline", $body->{ YMSG_FLD_BUDDY() });
+	}
+	elsif ($service == YMSG_SERVICE_LOGON) {
+		# Buddy logged on.
+		$self->event("BuddyOnline", $body->{ YMSG_FLD_BUDDY() });
+	}
+	elsif ($service == YMSG_SERVICE_FRIEND_ICON_DOWNLOAD) {
+		# YMSG is sending us a friend's buddy icon.
+		# They may send us multiple icons at once.
+		if (ref($body->{ YMSG_FLD_SENDER() }) eq "ARRAY") {
+			# They're sending multiple. Call the event for each one.
+			for (my $i = 0; $i < scalar @{$body->{ YMSG_FLD_SENDER() }}; $i++) {
+				$self->event("BuddyIconDownloaded", $body->{ YMSG_FLD_SENDER() }->[$i], "url", $body->{ YMSG_FLD_URL() });
+			}
+		}
+		else {
+			# Just one icon.
+			$self->event("BuddyIconDownloaded", $body->{ YMSG_FLD_SENDER() }, "url", $body->{ YMSG_FLD_URL() });
+		}
+	}
+	elsif ($service == YMSG_SERVICE_ICON_UPLOADED) {
+		# Our icon has been received by the server!
+		$self->event("BuddyIconUploaded");
 	}
 	elsif ($service == YMSG_SERVICE_DISCONNECT) {
 		# We've been disconnected!
@@ -495,6 +692,23 @@ hash-like structure containing the key/value pairs for the message.
 =cut
 
 sub send {
+	my ($self,$service,$status,@fields) = @_;
+
+	my $packet = $self->preparePacket($service, $status, @fields);
+
+	# Hexdump this packet.
+	$self->hexdump("Outgoing", $packet);
+	$self->{socket}->send($packet) or die "Can't send packet: $@";
+	return 1;
+}
+
+=head2 private bin preparePacket (int service, int status, hash body)
+
+Prepares a YMSG packet, but doesn't send it. Returns it instead.
+
+=cut
+
+sub preparePacket {
 	my ($self,$service,$status,@fields) = @_;
 
 	# $service will be one of the YMSG_SERVICE_* constants.
@@ -522,10 +736,7 @@ sub send {
 	$header =~ s/^YMSG\x10\x00/YMSG\x00\x10/; # TODO: fix the version number
 	my $packet = $header . $body;
 
-	# Hexdump this packet.
-	$self->hexdump("Outgoing", $packet);
-	$self->{socket}->send($packet) or die "Can't send packet: $@";
-	return 1;
+	return $packet;
 }
 
 =head2 private hash parseParams (bin data)
@@ -541,9 +752,13 @@ sub parseParams {
 	my $sep = YMSG_SEP;
 	my @bits = split(/\Q$sep\E/, $bin);
 
+	# Keep the fields in order in case order is important.
+	my $ordered = [];
+
 	# Dissect the data.
 	my $map = {};
 	for (my $i = 0; $i < scalar(@bits); $i += 2) {
+		push (@{$ordered}, [ $bits[$i], $bits[$i+1] ]);
 		if (exists $map->{ $bits[$i] }) {
 			# More than one field with the same number!
 			if (ref $map->{ $bits[$i] } ne "ARRAY") {
@@ -556,7 +771,7 @@ sub parseParams {
 		}
 	}
 
-	return $map;
+	return ($map, $ordered);
 }
 
 =head1 EVENT HANDLERS
@@ -572,6 +787,18 @@ Called when you're connected to YMSG and logged in successfully.
 =head2 void Notification (string from, string to, string message)
 
 This handles system messages (like to upgrade your client).
+
+=head2 void BuddyList (href list)
+
+The server has sent you your buddy list. C<list> is a hash of hashes, in the
+following format:
+
+  {
+    "Group Name" => {
+      "buddy_name" => 1,
+      ...
+    },
+  }
 
 =head2 void AddRequest (string from, string to)
 
@@ -612,6 +839,19 @@ List of status constants:
 
 Notification that a buddy has been removed from your buddy list (such as right
 after you call C<removeBuddy()>).
+
+=head2 void BuddyOnline (), void BuddyOffline ()
+
+Called when a buddy goes online or offline, respectively.
+
+=head2 void BuddyIconDownloaded (string YahooID, string type, string url)
+
+The server is sending you the buddy icon for somebody. C<type> will always be
+"url", and C<url> is the URL where the buddy icon can be downloaded.
+
+=head2 void BuddyIconUploaded ()
+
+Called when your icon has been uploaded to the server.
 
 =head2 void Disconnected ()
 

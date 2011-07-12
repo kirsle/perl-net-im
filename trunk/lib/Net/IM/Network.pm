@@ -25,6 +25,7 @@ This is a base class for a supported network for Net::IM.
 
 An overrideable constructor method. Options recommended:
 
+  string network:  The network's name.
   string username: A username to use with the IM network. You may also want to
                    add network-specific aliases to this, such as "screenname".
   string password: A password to use with the username.
@@ -66,15 +67,13 @@ sub debug {
 
 	# If debug mode is off, check if we're a slave and the parent has debug on.
 	if (!$self->{debug} && defined $self->{slave}) {
-		return $self->{slave}->debug($line);
+		# OK.
 	}
 	elsif (!$self->{debug}) {
 		return;
 	}
 
-	my $network = ref($self);
-	$network =~ s/^.*:://g;
-	say STDERR "[$network] $line";
+	say STDERR "[$self->{network}] $line";
 }
 
 =head2 void hexdump ([string label,] data)
@@ -106,7 +105,7 @@ sub hexdump {
 	for (my $i = 0; $i < scalar(@bytes); $i++) {
 		my $char    = sprintf("%02x", unpack("C", $bytes[$i]));
 		my $escaped = unpack("C", $bytes[$i]);
-		if ($escaped < 20) {
+		if ($escaped < 20 || $escaped > 126) {
 			$escaped = ".";
 		}
 		else {
@@ -223,6 +222,16 @@ sub whoami {
 		$class =~ s/^.*:://g;
 		return join("-", $class, $self->{username});
 	}
+}
+
+=head2 string network ()
+
+Retrieve the network name, e.g. "YMSG".
+
+=cut
+
+sub network {
+	return shift->{network};
 }
 
 =head2 string username ([string])

@@ -13,6 +13,8 @@ $/ = '#';
 my $VERSION = "1.0";
 
 print colored("\n\tYahoo Packet Sniffer v$VERSION\n-----------------------------------------\n\n", "cyan");
+print "Usage: sudo perl y_sniff.pl <interface || eth0>\n";
+my $if = shift(@ARGV) || "eth0";
 
 my $services = {
 	YMSG_SERVICE_USER_LOGIN => 1,
@@ -515,7 +517,8 @@ sub getNameByValue{
 		return $value;
 }
 
-open(NG,"ngrep -x -ltd eth1 YMSG |");
+print "Listening to network on $if\n\n";
+open(NG,"ngrep -x -ltd $if YMSG |");
 #open(NG,"ngrep -x -ltd en0 ^YMSG |");
 
 while(<NG>) {
