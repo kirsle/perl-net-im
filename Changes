@@ -1,0 +1,6 @@
+Revision history for Perl extension Net::IM.
+
+0.01  Mon Jul 11 15:15:08 2011
+	- original version; created by h2xs 1.23 with options
+		-X -n Net::IM
+
